@@ -398,7 +398,7 @@ export default function GroupDetail() {
   };
 
   if (loading) return <div className="p-4 text-center">Cargando...</div>;
-  if (!group) return <div className="p-4 text-center">Grupo no encontrado</div>;
+  if (!group) return <div className="p-4 text-center">Gasto no encontrado</div>;
 
   return (
     <div>

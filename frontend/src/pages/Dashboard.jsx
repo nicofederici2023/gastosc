@@ -127,7 +127,7 @@ export default function Dashboard() {
   return (
     <div>
       <div className="header mb-6" style={{ margin: '-1.5rem -1.5rem 1.5rem -1.5rem' }}>
-        <h1 className="text-xl">Mis Grupos</h1>
+        <h1 className="text-xl">Mis Gastos</h1>
         <button 
           onClick={() => setShowModal(true)} 
           className="btn btn-primary" 
@@ -141,9 +141,9 @@ export default function Dashboard() {
         <p className="text-center text-muted">Cargando...</p>
       ) : groups.length === 0 ? (
         <div className="text-center py-10">
-          <p className="text-muted mb-4">No estás en ningún grupo todavía.</p>
+          <p className="text-muted mb-4">No tienes ningún gasto todavía.</p>
           <button onClick={() => setShowModal(true)} className="btn btn-secondary" style={{width: 'auto'}}>
-            Crear tu primer grupo
+            Crear tu primer gasto
           </button>
         </div>
       ) : (
@@ -211,11 +211,11 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Modal Crear Grupo */}
+      {/* Modal Crear Gasto */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="card w-full animate-fade-in" style={{ maxWidth: '400px' }}>
-            <h2 className="mb-4">Nuevo Grupo</h2>
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="card w-full animate-fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h2 className="mb-4">Nuevo Gasto</h2>
             <form onSubmit={handleCreateGroup}>
               <div className="input-group">
                 <label>Nombre (ej. Viaje a Capilla)</label>
@@ -245,11 +245,11 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Modal Editar Grupo */}
+      {/* Modal Editar Gasto */}
       {editingGroup && (
-        <div className="modal-overlay">
-          <div className="card w-full animate-fade-in" style={{ maxWidth: '400px' }}>
-            <h2 className="mb-4">Editar Grupo</h2>
+        <div className="modal-overlay" onClick={() => setEditingGroup(null)}>
+          <div className="card w-full animate-fade-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h2 className="mb-4">Editar Gasto</h2>
             <form onSubmit={handleEditGroup}>
               <div className="input-group">
                 <label>Nombre</label>
@@ -283,9 +283,9 @@ export default function Dashboard() {
       {showDeleteConfirm && (
         <div className="modal-overlay">
           <div className="card w-full animate-fade-in" style={{ maxWidth: '400px' }}>
-            <h2 className="mb-4 text-danger">¿Eliminar Grupo?</h2>
+            <h2 className="mb-4 text-danger">¿Eliminar Gasto?</h2>
             <p className="text-sm text-muted mb-6">
-              Esta acción eliminará de forma permanente el grupo <strong>{showDeleteConfirm.name}</strong>, todos sus gastos, saldos y participantes registrados. Esta acción no se puede deshacer.
+              Esta acción eliminará de forma permanente el gasto <strong>{showDeleteConfirm.name}</strong>, todos sus detalles, saldos y participantes registrados. Esta acción no se puede deshacer.
             </p>
             <div className="flex gap-2">
               <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteConfirm(null)}>Cancelar</button>
