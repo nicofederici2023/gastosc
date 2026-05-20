@@ -109,7 +109,7 @@ export default function InstallPrompt() {
             <Download size={20} />
           </div>
           <div>
-            <h4 style={{ fontWeight: '700', fontSize: '0.95rem' }}>Instalar Gastos Compartidos</h4>
+            <h4 style={{ fontWeight: '700', fontSize: '0.95rem' }}>Instalar Expedición Uritorco</h4>
             <p className="text-xs text-muted">Accedé más rápido desde tu pantalla de inicio</p>
           </div>
         </div>

@@ -1,37 +1,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --primary: #6366F1; /* Indigo 500 */
-  --primary-hover: #4F46E5; /* Indigo 600 */
-  --primary-light: rgba(99, 102, 241, 0.1);
-  --secondary: #10B981; /* Emerald 500 */
-  --secondary-hover: #059669;
-  --secondary-light: rgba(16, 185, 129, 0.1);
-  --background: #F8FAFC; /* Slate 50 */
-  --surface: #FFFFFF;
-  --text-main: #0F172A; /* Slate 900 */
-  --text-muted: #64748B; /* Slate 500 */
-  --border: #E2E8F0; /* Slate 200 */
-  --danger: #F43F5E; /* Rose 500 */
-  --danger-light: rgba(244, 63, 94, 0.1);
+  --primary: #9d4edd; /* Mystical Purple */
+  --primary-hover: #7b2cbf;
+  --primary-light: rgba(157, 78, 221, 0.2);
+  --secondary: #39ff14; /* Neon Alien Green */
+  --secondary-hover: #32e011;
+  --secondary-light: rgba(57, 255, 20, 0.15);
+  --background: #0b0c10; /* Very dark night */
+  --surface: #1f2833; /* Dark bluish gray */
+  --text-main: #c5c6c7; /* Light gray text */
+  --text-muted: #8b929a;
+  --border: #45a29e; /* Teal border for that alien tech vibe */
+  --danger: #ff2a2a; 
+  --danger-light: rgba(255, 42, 42, 0.15);
   --radius: 16px;
-  --shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.04), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
 }
 
-/* Dark Mode Support */
+/* Dark Mode Support (Enforced Dark Theme for Mystical Vibe) */
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary: #818CF8; /* Indigo 400 */
-    --primary-hover: #6366F1;
-    --primary-light: rgba(129, 140, 248, 0.15);
-    --background: #090D16; /* Deep Midnight Blue */
-    --surface: #111827; /* Gray 900 */
-    --text-main: #F8FAFC; /* Slate 50 */
-    --text-muted: #94A3B8; /* Slate 400 */
-    --border: #1E293B; /* Slate 800 */
-    --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    --primary: #9d4edd;
+    --primary-hover: #7b2cbf;
+    --primary-light: rgba(157, 78, 221, 0.2);
+    --background: #0b0c10;
+    --surface: #151a22;
+    --text-main: #c5c6c7;
+    --text-muted: #8b929a;
+    --border: #45a29e;
+    --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -54,6 +54,7 @@ body {
   margin: 0 auto;
   min-height: 100vh;
   background-color: var(--background);
+  background-image: radial-gradient(circle at 50% 0%, rgba(157, 78, 221, 0.15) 0%, var(--background) 70%);
   position: relative;
   box-shadow: 0 0 40px rgba(0,0,0,0.03);
   display: flex;
@@ -370,3 +371,43 @@ h1, h2, h3 {
   background-color: var(--danger-light);
   color: var(--danger);
 }
+
+/* Uritorco Mystical Animations */
+.ufo-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ufo {
+  position: absolute;
+  font-size: 2.5rem;
+  animation: floatUfo 18s linear infinite;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 10px var(--secondary));
+}
+
+.alien {
+  position: absolute;
+  font-size: 2rem;
+  animation: floatAlien 25s ease-in-out infinite alternate;
+  opacity: 0.6;
+  filter: drop-shadow(0 0 8px var(--primary));
+}
+
+@keyframes floatUfo {
+  0% { transform: translate(-50px, 15vh) rotate(-15deg); }
+  50% { transform: translate(120vw, 35vh) rotate(10deg); }
+  100% { transform: translate(-50px, 15vh) rotate(-15deg); }
+}
+
+@keyframes floatAlien {
+  0% { transform: translate(110vw, 60vh) scale(0.8) rotate(5deg); }
+  100% { transform: translate(-10vw, 20vh) scale(1.2) rotate(-5deg); }
+}
+

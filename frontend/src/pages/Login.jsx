@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../config/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Wallet } from 'lucide-react';
+import { Tent } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -63,12 +63,18 @@ export default function Login() {
 
   return (
     <div className="animate-fade-in flex flex-col items-center justify-center" style={{ minHeight: '80vh' }}>
-      <div className="mb-8 text-center">
-        <div className="flex justify-center mb-4 text-primary">
-          <Wallet size={48} />
+      {/* UFO Animations */}
+      <div className="ufo-container">
+        <div className="ufo">🛸</div>
+        <div className="alien">👽</div>
+      </div>
+
+      <div className="mb-8 text-center" style={{ zIndex: 1 }}>
+        <div className="flex justify-center mb-4 text-secondary">
+          <Tent size={56} />
         </div>
-        <h1 className="text-2xl">Gastos Compartidos</h1>
-        <p className="text-muted mt-2">Gestioná los gastos de tus viajes y eventos</p>
+        <h1 className="text-3xl text-primary">Expedición Uritorco</h1>
+        <p className="text-muted mt-2">Finanzas místicas de nuestro viaje</p>
       </div>
 
       <div className="card w-full">
