@@ -9,11 +9,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Gastos Compartidos',
-        short_name: 'Gastos',
-        description: 'Gestión de gastos compartidos para viajes y eventos',
-        theme_color: '#1a1a1a',
-        background_color: '#ffffff',
+        name: 'Expedición Uritorco',
+        short_name: 'Uritorco',
+        description: 'Gestión de gastos místicos',
+        theme_color: '#0b0c10',
+        background_color: '#0b0c10',
         display: 'standalone',
         icons: [
           {

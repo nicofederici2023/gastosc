@@ -38,6 +38,11 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="app-container">
+          {/* UFO Animations Globales */}
+          <div className="ufo-container">
+            <div className="ufo">🛸</div>
+            <div className="alien">👽</div>
+          </div>
           <div className="content">
             <Routes>
               <Route path="/login" element={<Login />} />

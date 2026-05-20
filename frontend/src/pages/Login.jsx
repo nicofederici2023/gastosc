@@ -63,11 +63,7 @@ export default function Login() {
 
   return (
     <div className="animate-fade-in flex flex-col items-center justify-center" style={{ minHeight: '80vh' }}>
-      {/* UFO Animations */}
-      <div className="ufo-container">
-        <div className="ufo">🛸</div>
-        <div className="alien">👽</div>
-      </div>
+
 
       <div className="mb-8 text-center" style={{ zIndex: 1 }}>
         <div className="flex justify-center mb-4 text-secondary">
