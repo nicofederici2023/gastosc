@@ -479,6 +479,16 @@ h1, h2, h3 {
   width: 100%;
   height: 250px;
   z-index: 1;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.uritorco-mountain-wrapper path,
+.uritorco-mountain-wrapper svg {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 /* Mountain Portal Pulse */
