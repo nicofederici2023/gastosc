@@ -19,6 +19,8 @@ const UfoIcon = () => (
   <svg viewBox="0 0 50 30" style={{ width: '100%', height: '100%' }} fill="none" xmlns="http://www.w3.org/2000/svg">
     {/* Upper dome */}
     <path d="M15 12 C 15 5, 35 5, 35 12" stroke="var(--secondary)" strokeWidth="2" fill="rgba(57, 255, 20, 0.25)" />
+    {/* Tiny Alien Pilot inside the dome */}
+    <text x="25" y="10.5" fontSize="7.5" textAnchor="middle" dominantBaseline="middle" style={{ userSelect: 'none' }}>👽</text>
     {/* Ship body */}
     <ellipse cx="25" cy="15" rx="21" ry="5.5" fill="#151a22" stroke="var(--primary)" strokeWidth="2" />
     {/* Glowing light dots */}
@@ -84,7 +86,6 @@ function DraggableUfo({ className, portalRef, onAbsorb, onBoost }) {
     const newY = e.clientY - offsetRef.current.y;
     setPos({ x: newX, y: newY });
 
-    // 1. Spawning trail exhaust particles centered relative to the ship (90x80 container)
     const centerX = newX + 45; 
     const centerY = newY + 40;
     
@@ -93,7 +94,6 @@ function DraggableUfo({ className, portalRef, onAbsorb, onBoost }) {
       { id: Date.now() + Math.random(), x: centerX, y: centerY }
     ]);
 
-    // 2. Detect proximity to Mount Uritorco Portal center
     if (portalRef && portalRef.current) {
       const portalRect = portalRef.current.getBoundingClientRect();
       const portalCenterX = portalRect.left + portalRect.width / 2;
@@ -104,7 +104,6 @@ function DraggableUfo({ className, portalRef, onAbsorb, onBoost }) {
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       if (distance < 75) {
-        // Portal Abduction Sequence Triggered!
         setDragging(false);
         setAbsorbed(true);
 
@@ -138,14 +137,13 @@ function DraggableUfo({ className, portalRef, onAbsorb, onBoost }) {
 
     setDragging(false);
 
-    // Calculate if pointer action was a quick click/tap
     const duration = Date.now() - startTimeRef.current;
     const dx = e.clientX - startPosRef.current.x;
     const dy = e.clientY - startPosRef.current.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
     if (duration < 280 && distance < 12) {
-      // Tap detected -> Activate Warp Speed Boost!
+      // Tap detected -> Activate Hyper-Drive Speed Boost!
       setBoosted(true);
       setPos(null); // Release drag position to let CSS warp speed animation play instantly
 
@@ -163,7 +161,6 @@ function DraggableUfo({ className, portalRef, onAbsorb, onBoost }) {
       }, 6000);
 
     } else {
-      // Regular release -> return smooth transition
       setReturning(true);
       setTimeout(() => {
         setPos(null);
@@ -276,8 +273,13 @@ export default function UritorcoBackground() {
       navigator.vibrate([40]);
     }
 
+    // Interactive alien emojis/smileys floating up instead of the text "Hipervelocidad"
+    const alienSmileys = [
+      "👽", "👽✨", "👽🛸", "👾", "👾🌀", "🛸💨", "🪐", "👽💚", "💫👽", "🛸👽"
+    ];
+    const text = alienSmileys[Math.floor(Math.random() * alienSmileys.length)];
     const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, text: "¡HIPERVELOCIDAD! ⚡🚀", x, y }]);
+    setToasts((prev) => [...prev, { id, text, x, y }]);
 
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -364,9 +366,9 @@ export default function UritorcoBackground() {
         </div>
       </div>
 
-      {/* Foreground Touch Interactive Layer (z-index: 20) */}
-      <div className="ufo-foreground-container">
-        {/* Render portal shockwaves globally in foreground */}
+      {/* Background Interactive Layer for Spaceships (z-index: 0) */}
+      <div className="ufo-background-interactive-container">
+        {/* Render portal shockwaves globally in background layer */}
         {pulses.map((p) => (
           <div
             key={p.id}
@@ -379,8 +381,11 @@ export default function UritorcoBackground() {
         <DraggableUfo className="ufo-entering" portalRef={portalRef} onAbsorb={handleAbsorb} onBoost={handleBoost} />
         <DraggableUfo className="ufo-exiting" portalRef={portalRef} onAbsorb={handleAbsorb} onBoost={handleBoost} />
         <DraggableUfo className="ufo-peak-hover" portalRef={portalRef} onAbsorb={handleAbsorb} onBoost={handleBoost} />
+      </div>
 
-        {/* Floating portal toasts */}
+      {/* Foreground Toasts Layer for Alien Smileys (z-index: 20) */}
+      <div className="ufo-toasts-container">
+        {/* Floating portal abduction / boost toasts (rendered in front of content cards) */}
         {toasts.map((t) => (
           <div key={t.id} className="portal-toast" style={{ left: `${t.x}px`, top: `${t.y}px` }}>
             {t.text}
