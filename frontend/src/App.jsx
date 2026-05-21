@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import GroupDetail from './pages/GroupDetail';
 import Profile from './pages/Profile';
 import InstallPrompt from './components/InstallPrompt';
+import UritorcoBackground from './components/UritorcoBackground';
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -40,11 +41,8 @@ function App() {
       <PwaProvider>
         <Router>
           <div className="app-container">
-            {/* UFO Animations Globales */}
-            <div className="ufo-container">
-              <div className="ufo">🛸</div>
-              <div className="alien">👽</div>
-            </div>
+            {/* Global Uritorco Background – stars, mountain & spaceships */}
+            <UritorcoBackground />
             <div className="content">
               <Routes>
                 <Route path="/login" element={<Login />} />

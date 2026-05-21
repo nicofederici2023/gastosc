@@ -3,7 +3,7 @@ import { supabase } from '../config/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Tent, Download, Share } from 'lucide-react';
 import { usePwa } from '../context/PwaContext';
-import UritorcoBackground from '../components/UritorcoBackground';
+
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -63,8 +63,7 @@ export default function Login() {
 
   return (
     <div className="login-page-container">
-      {/* Mystical Mount Uritorco Background */}
-      <UritorcoBackground />
+
 
       <div className="mb-8 text-center" style={{ zIndex: 2 }}>
         <div className="flex justify-center mb-4 text-secondary">
