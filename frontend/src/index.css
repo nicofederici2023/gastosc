@@ -464,11 +464,35 @@ h1, h2, h3 {
 /* Spaceships */
 .ufo-ship {
   position: absolute;
-  pointer-events: none;
-  width: 50px;
+  pointer-events: auto;
+  cursor: grab;
+  width: 90px;      /* Large hit target */
+  height: 80px;     /* Large hit target */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.2s;
+}
+
+.ufo-ship:active {
+  cursor: grabbing;
+}
+
+.ufo-ship svg {
+  width: 50px;      /* Visual dimensions match the original */
   height: 30px;
-  z-index: 2;
+  pointer-events: none;
   filter: drop-shadow(0 0 6px var(--secondary));
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.3s;
+}
+
+.ufo-ship.dragging svg {
+  transform: scale(1.3) rotate(0deg);
+  filter: drop-shadow(0 0 14px var(--secondary)) drop-shadow(0 0 25px var(--primary));
 }
 
 /* Ship 1: Entering the portal */
@@ -478,7 +502,7 @@ h1, h2, h3 {
 
 @keyframes ufoEnter {
   0% {
-    left: 110%;
+    left: calc(110% - 45px);
     top: 5%;
     transform: scale(1) rotate(-10deg);
     opacity: 0;
@@ -487,14 +511,14 @@ h1, h2, h3 {
     opacity: 1;
   }
   65% {
-    left: 55%;
+    left: calc(55% - 45px);
     top: 55%;
     transform: scale(0.6) rotate(-20deg);
     opacity: 0.9;
   }
   80%, 100% {
-    left: 50%;
-    top: calc(100% - 130px);
+    left: calc(50% - 45px);
+    top: calc(100% - 150px);
     transform: scale(0) rotate(-45deg);
     opacity: 0;
   }
@@ -509,8 +533,8 @@ h1, h2, h3 {
 
 @keyframes ufoExit {
   0%, 10% {
-    left: 50%;
-    top: calc(100% - 130px);
+    left: calc(50% - 45px);
+    top: calc(100% - 150px);
     transform: scale(0) rotate(45deg);
     opacity: 0;
   }
@@ -518,13 +542,13 @@ h1, h2, h3 {
     opacity: 1;
   }
   75% {
-    left: 20%;
+    left: calc(20% - 45px);
     top: 25%;
     transform: scale(0.8) rotate(15deg);
     opacity: 0.9;
   }
   90%, 100% {
-    left: -15%;
+    left: -45px;
     top: 10%;
     transform: scale(1.2) rotate(5deg);
     opacity: 0;
@@ -534,8 +558,11 @@ h1, h2, h3 {
 /* Ship 3: Hovering above peak */
 .ufo-peak-hover {
   animation: ufoPeak 16s infinite ease-in-out;
-  left: calc(50% - 12px);
-  top: calc(100% - 245px); /* Just above peak (250px height) */
+  left: calc(50% - 45px);
+  top: calc(100% - 265px); /* Just above peak */
+}
+
+.ufo-peak-hover svg {
   filter: drop-shadow(0 0 8px var(--primary));
 }
 
@@ -545,6 +572,93 @@ h1, h2, h3 {
   }
   50% {
     transform: translate(25px, -15px) scale(1.1);
+  }
+}
+
+/* Trailing exhaust particles */
+.ufo-trail-particle {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--secondary) 20%, rgba(157, 78, 221, 0.4) 60%, transparent 90%);
+  filter: drop-shadow(0 0 6px var(--secondary));
+  opacity: 0.9;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  animation: fadeOutParticle 0.4s forwards cubic-bezier(0.1, 0.8, 0.2, 1);
+}
+
+@keyframes fadeOutParticle {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.1);
+  }
+}
+
+/* Portal shockwave rings */
+.portal-shockwave {
+  position: absolute;
+  border: 2.5px solid var(--secondary);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  animation: portalWave 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes portalWave {
+  0% {
+    width: 20px;
+    height: 30px;
+    opacity: 1;
+    border-color: var(--secondary);
+    filter: drop-shadow(0 0 5px var(--secondary));
+  }
+  50% {
+    border-color: var(--primary);
+    filter: drop-shadow(0 0 10px var(--primary));
+  }
+  100% {
+    width: 220px;
+    height: 280px;
+    opacity: 0;
+    border-color: #ffffff;
+    filter: drop-shadow(0 0 15px var(--primary));
+  }
+}
+
+/* Floating Portal Toasts */
+.portal-toast {
+  position: fixed;
+  pointer-events: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--secondary);
+  text-shadow: 0 0 8px var(--secondary), 0 0 15px var(--primary), 0 0 25px #ffffff;
+  z-index: 1000;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  animation: floatUpToast 1.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes floatUpToast {
+  0% {
+    opacity: 0;
+    margin-top: 15px;
+    transform: translate(-50%, -50%) scale(0.6) rotate(-15deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.25) rotate(6deg);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    margin-top: -95px;
+    transform: translate(-50%, -50%) scale(0.85) rotate(-6deg);
   }
 }
 
