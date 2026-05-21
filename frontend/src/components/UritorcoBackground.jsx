@@ -232,6 +232,9 @@ export default function UritorcoBackground() {
   const portalRef = useRef(null);
   const [toasts, setToasts] = useState([]);
   const [pulses, setPulses] = useState([]);
+  const [clicks, setClicks] = useState(0);
+  const [showJumpscare, setShowJumpscare] = useState(false);
+  const clickTimeoutRef = useRef(null);
 
   const handleAbsorb = useCallback(() => {
     if (!portalRef.current) return;
@@ -273,7 +276,6 @@ export default function UritorcoBackground() {
       navigator.vibrate([40]);
     }
 
-    // Interactive alien emojis/smileys floating up instead of the text "Hipervelocidad"
     const alienSmileys = [
       "👽", "👽✨", "👽🛸", "👾", "👾🌀", "🛸💨", "🪐", "👽💚", "💫👽", "🛸👽"
     ];
@@ -284,6 +286,47 @@ export default function UritorcoBackground() {
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 1500);
+  }, []);
+
+  const handleMountainClick = useCallback(() => {
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+
+    setClicks((prev) => {
+      const next = prev + 1;
+      
+      // Proximity warning vibration from 6 clicks upwards (gets more intense!)
+      if (next >= 6 && next < 10) {
+        if (navigator.vibrate) {
+          navigator.vibrate(30 + (next - 6) * 15);
+        }
+      }
+
+      if (next >= 10) {
+        // Trigger Alien Easter Egg Jumpscare!
+        setShowJumpscare(true);
+
+        // Haptic startle drumroll vibration pattern
+        if (navigator.vibrate) {
+          navigator.vibrate([80, 50, 80, 50, 100, 50, 450]);
+        }
+
+        // Hide it after 2.2 seconds
+        setTimeout(() => {
+          setShowJumpscare(false);
+        }, 2200);
+
+        return 0; // Reset clicks
+      }
+
+      return next;
+    });
+
+    // Reset click count after 3 seconds of inactivity
+    clickTimeoutRef.current = setTimeout(() => {
+      setClicks(0);
+    }, 3000);
   }, []);
 
   return (
@@ -337,13 +380,15 @@ export default function UritorcoBackground() {
             {/* Glowing energy fields */}
             <circle cx="500" cy="200" r="180" fill="url(#glowGrad)" />
 
-            {/* Mount Uritorco ridge silhouette */}
+            {/* Mount Uritorco ridge silhouette with click handler */}
             <path
               d="M-50,400 L80,280 L220,330 L500,120 L720,320 L880,270 L1050,400 Z"
               fill="url(#mountainGrad)"
               stroke="var(--primary)"
               strokeWidth="2"
               filter="url(#mountainGlow)"
+              style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+              onClick={handleMountainClick}
             />
 
             {/* Solid base */}
@@ -392,6 +437,14 @@ export default function UritorcoBackground() {
           </div>
         ))}
       </div>
+
+      {/* Easter Egg Jumpscare Overlay (z-index: 10000) */}
+      {showJumpscare && (
+        <div className="alien-jumpscare-overlay">
+          <div className="alien-jumpscare-face">👽</div>
+          <div className="alien-jumpscare-text">¡¡ABDUCIDO!! 🐄🛸</div>
+        </div>
+      )}
     </>
   );
 }
