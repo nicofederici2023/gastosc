@@ -13,6 +13,21 @@ const STARS_DATA = Array.from({ length: 30 }).map((_, i) => {
   return { id: i, top, left, size, delay, duration };
 });
 
+const UfoIcon = () => (
+  <svg viewBox="0 0 50 30" style={{ width: '100%', height: '100%' }} fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Upper dome */}
+    <path d="M15 12 C 15 5, 35 5, 35 12" stroke="var(--secondary)" strokeWidth="2" fill="rgba(57, 255, 20, 0.25)" />
+    {/* Ship body */}
+    <ellipse cx="25" cy="15" rx="21" ry="5.5" fill="#151a22" stroke="var(--primary)" strokeWidth="2" />
+    {/* Glowing light dots */}
+    <circle cx="10" cy="15" r="1.5" fill="var(--secondary)" />
+    <circle cx="17" cy="16" r="1.5" fill="#ffffff" />
+    <circle cx="25" cy="16.5" r="1.5" fill="var(--secondary)" />
+    <circle cx="33" cy="16" r="1.5" fill="#ffffff" />
+    <circle cx="40" cy="15" r="1.5" fill="var(--secondary)" />
+  </svg>
+);
+
 export default function UritorcoBackground() {
   return (
     <div className="uritorco-bg-container">
@@ -34,13 +49,19 @@ export default function UritorcoBackground() {
 
       {/* UFOs */}
       {/* UFO 1: Entering the mountain portal */}
-      <div className="ufo-ship ufo-entering">🛸</div>
+      <div className="ufo-ship ufo-entering">
+        <UfoIcon />
+      </div>
 
       {/* UFO 2: Exiting the mountain portal */}
-      <div className="ufo-ship ufo-exiting">🛸</div>
+      <div className="ufo-ship ufo-exiting">
+        <UfoIcon />
+      </div>
 
       {/* UFO 3: Orbiting/Hovering above peak */}
-      <div className="ufo-ship ufo-peak-hover">🛸</div>
+      <div className="ufo-ship ufo-peak-hover">
+        <UfoIcon />
+      </div>
 
       {/* Mountain SVG at the bottom */}
       <div className="uritorco-mountain-wrapper">
