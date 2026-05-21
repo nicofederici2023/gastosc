@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Home, Users, UserCircle } from 'lucide-react';
+import { Home, UserCircle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { PwaProvider } from './context/PwaContext';
 
 // Pages
 import Login from './pages/Login';
@@ -36,30 +37,32 @@ const BottomNav = () => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="app-container">
-          {/* UFO Animations Globales */}
-          <div className="ufo-container">
-            <div className="ufo">🛸</div>
-            <div className="alien">👽</div>
-          </div>
-          <div className="content">
+      <PwaProvider>
+        <Router>
+          <div className="app-container">
+            {/* UFO Animations Globales */}
+            <div className="ufo-container">
+              <div className="ufo">🛸</div>
+              <div className="alien">👽</div>
+            </div>
+            <div className="content">
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/group/:id" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              </Routes>
+            </div>
+            
             <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/group/:id" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/login" element={null} />
+              <Route path="*" element={<BottomNav />} />
             </Routes>
+            
+            <InstallPrompt />
           </div>
-          
-          <Routes>
-            <Route path="/login" element={null} />
-            <Route path="*" element={<BottomNav />} />
-          </Routes>
-          
-          <InstallPrompt />
-        </div>
-      </Router>
+        </Router>
+      </PwaProvider>
     </AuthProvider>
   );
 }

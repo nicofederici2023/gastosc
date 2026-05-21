@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '../config/supabase';
 import { useNavigate } from 'react-router-dom';
-import { Tent } from 'lucide-react';
+import { Tent, Download, Share } from 'lucide-react';
+import { usePwa } from '../context/PwaContext';
+import UritorcoBackground from '../components/UritorcoBackground';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -10,8 +12,10 @@ export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showIosTip, setShowIosTip] = useState(false);
   
   const navigate = useNavigate();
+  const { isInstallable, isIOS, isStandalone, installApp } = usePwa();
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -20,8 +24,6 @@ export default function Login() {
 
     try {
       if (isSignUp) {
-        // As per backend logic, we could use our own API but since we have 
-        // Supabase directly in frontend we can just use it to sign up
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -34,7 +36,6 @@ export default function Login() {
         
         if (error) throw error;
         
-        // Let backend trigger handle the profile insert or we do it here
         if (data.user) {
           await supabase.from('profiles').insert([{
             id: data.user.id,
@@ -43,7 +44,6 @@ export default function Login() {
           }]);
         }
         
-        // After signup, might need to login or redirect
         if (!error) navigate('/');
 
       } else {
@@ -62,18 +62,19 @@ export default function Login() {
   };
 
   return (
-    <div className="animate-fade-in flex flex-col items-center justify-center" style={{ minHeight: '80vh' }}>
+    <div className="login-page-container">
+      {/* Mystical Mount Uritorco Background */}
+      <UritorcoBackground />
 
-
-      <div className="mb-8 text-center" style={{ zIndex: 1 }}>
+      <div className="mb-8 text-center" style={{ zIndex: 2 }}>
         <div className="flex justify-center mb-4 text-secondary">
-          <Tent size={56} />
+          <Tent size={56} style={{ filter: 'drop-shadow(0 0 10px var(--secondary))' }} />
         </div>
-        <h1 className="text-3xl text-primary">Expedición Uritorco</h1>
+        <h1 className="text-3xl text-primary" style={{ textShadow: '0 0 10px rgba(157, 78, 221, 0.5)' }}>Expedición Uritorco</h1>
         <p className="text-muted mt-2">Finanzas místicas de nuestro viaje</p>
       </div>
 
-      <div className="card w-full">
+      <div className="card w-full" style={{ zIndex: 2, background: 'rgba(31, 40, 51, 0.85)', backdropFilter: 'blur(10px)', border: '1px solid rgba(69, 162, 158, 0.5)' }}>
         <h2 className="mb-4 text-center">{isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}</h2>
         
         {error && (
@@ -116,20 +117,89 @@ export default function Login() {
             />
           </div>
           
-          <button type="submit" className="btn btn-primary mt-4" disabled={loading}>
+          <button 
+            type="submit" 
+            className={`btn mt-4 ${isSignUp ? 'btn-register' : 'btn-primary'}`} 
+            disabled={loading}
+          >
             {loading ? 'Cargando...' : isSignUp ? 'Registrarse' : 'Ingresar'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <button 
-            type="button" 
-            className="text-primary font-medium border-none bg-transparent cursor-pointer"
-            onClick={() => setIsSignUp(!isSignUp)}
-          >
-            {isSignUp ? '¿Ya tenés cuenta? Ingresá' : '¿No tenés cuenta? Registrate'}
-          </button>
+          {isSignUp ? (
+            <button 
+              type="button" 
+              className="text-primary font-medium border-none bg-transparent cursor-pointer text-sm"
+              onClick={() => setIsSignUp(false)}
+            >
+              ¿Ya tenés cuenta? Ingresá
+            </button>
+          ) : (
+            <button 
+              type="button" 
+              className="btn-switch-register"
+              onClick={() => setIsSignUp(true)}
+            >
+              ¿No tenés cuenta? Registrate
+            </button>
+          )}
         </div>
+      </div>
+
+      {/* PWA Installation Card in Login Screen */}
+      <div style={{ zIndex: 2, width: '100%' }}>
+        {isStandalone ? (
+          <div className="login-pwa-card text-center">
+            <div className="login-pwa-title justify-center">
+              <span>¡App instalada con éxito! 🛸</span>
+            </div>
+            <p className="login-pwa-desc">Estás navegando en modo nativo.</p>
+          </div>
+        ) : isInstallable ? (
+          <div className="login-pwa-card">
+            <div className="login-pwa-title">
+              <Download size={18} />
+              <span>Instalar Expedición Uritorco</span>
+            </div>
+            <p className="login-pwa-desc">Instalá la aplicación en tu celular para gestionar gastos sin conexión.</p>
+            <button type="button" className="btn btn-secondary w-full" onClick={installApp}>
+              Instalar Aplicación
+            </button>
+          </div>
+        ) : isIOS ? (
+          <div className="login-pwa-card">
+            <div className="login-pwa-title">
+              <Download size={18} />
+              <span>Instalar en tu iPhone</span>
+            </div>
+            <p className="login-pwa-desc">Agregá esta app a tu pantalla de inicio desde Safari.</p>
+            <button 
+              type="button" 
+              className="btn btn-secondary w-full" 
+              onClick={() => setShowIosTip(!showIosTip)}
+            >
+              {showIosTip ? 'Ocultar instrucciones' : 'Cómo instalar en iOS'}
+            </button>
+            {showIosTip && (
+              <div className="text-xs text-muted mt-3 p-3 bg-black/40 rounded-xl border border-primary-light" style={{ lineHeight: '1.5' }}>
+                <p className="flex items-center gap-1.5 mb-2 font-semibold text-main" style={{ color: 'var(--text-main)' }}>
+                  <Share size={14} className="text-primary" /> Instrucciones Safari:
+                </p>
+                1. Presioná el botón de <strong>Compartir</strong> en la barra inferior de Safari.<br />
+                2. Desplazá hacia abajo y elegí <strong>"Agregar a inicio"</strong> o <strong>"Add to Home Screen"</strong>.
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Fallback info when browser is not PWA capable or already installed but not standalone check */
+          <div className="login-pwa-card text-center">
+            <div className="login-pwa-title justify-center" style={{ color: 'var(--text-muted)' }}>
+              <span>Expedición Uritorco PWA 📱</span>
+            </div>
+            <p className="login-pwa-desc" style={{ marginBottom: 0 }}>Para una mejor experiencia, podés instalar esta app desde el menú de tu navegador.</p>
+          </div>
+        )}
       </div>
     </div>
   );

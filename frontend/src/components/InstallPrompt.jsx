@@ -1,84 +1,41 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Download, Share, X, CheckCircle } from 'lucide-react';
+import { usePwa } from '../context/PwaContext';
 
 export default function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [installed, setInstalled] = useState(false);
+  const { isInstallable, isIOS, isStandalone, installed, installApp } = usePwa();
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem('pwa_prompt_dismissed') === 'true');
+  const [iosDelayPassed, setIosDelayPassed] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    // 1. Verificar si ya está ejecutándose como PWA standalone
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-    if (isStandalone) {
-      return;
-    }
-
-    // 2. Verificar si el usuario ya desestimó el prompt en esta sesión
-    const isDismissed = localStorage.getItem('pwa_prompt_dismissed') === 'true';
-    if (isDismissed) {
-      return;
-    }
-
-    // 3. Detectar si es iOS
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const ios = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(ios);
-
-    // 4. Escuchar evento de instalación para navegadores Chromium
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowPrompt(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // Escuchar si la app se instala con éxito
-    const handleAppInstalled = () => {
-      setInstalled(true);
-      setShowPrompt(false);
-      setTimeout(() => setInstalled(false), 3000);
-    };
-
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    // Para iOS: mostrar el prompt informativo después de 3 segundos
-    if (ios) {
-      const timer = setTimeout(() => {
-        setShowPrompt(true);
-      }, 3000);
+    if (isIOS) {
+      const timer = setTimeout(() => setIosDelayPassed(true), 3000);
       return () => clearTimeout(timer);
     }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
+  }, [isIOS]);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-      setShowPrompt(false);
+    const success = await installApp();
+    if (success) {
+      // no-op, usePwa will update isStandalone
     }
   };
 
   const handleDismiss = () => {
     localStorage.setItem('pwa_prompt_dismissed', 'true');
-    setShowPrompt(false);
+    setDismissed(true);
   };
+
+  // No mostrar el banner general en la pantalla de login (donde habrá un widget dedicado)
+  if (location.pathname === '/login') return null;
 
   if (installed) {
     return (
       <div style={{
         position: 'fixed', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)',
-        backgroundColor: 'var(--secondary)', color: 'white', padding: '1rem 1.5rem',
+        backgroundColor: 'var(--secondary)', color: 'black', padding: '1rem 1.5rem',
         borderRadius: '16px', zIndex: 100, display: 'flex', alignItems: 'center', gap: '0.5rem',
         boxShadow: 'var(--shadow-lg)', fontWeight: '600', animation: 'fadeIn 0.3s ease-out'
       }}>
@@ -88,6 +45,7 @@ export default function InstallPrompt() {
     );
   }
 
+  const showPrompt = !isStandalone && !dismissed && (isInstallable || (isIOS && iosDelayPassed));
   if (!showPrompt) return null;
 
   return (
