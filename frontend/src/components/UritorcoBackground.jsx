@@ -33,27 +33,31 @@ const UfoIcon = () => (
 /**
  * Wrapper that makes a UFO ship draggable via unified Pointer Events.
  * Uses setPointerCapture to keep dragging even when moving fast off-element.
- * Pauses CSS animations during drag, displays a trailing exhaust particle trail,
- * and handles Mount Uritorco portal abductions when dragged close to it.
+ * Tapping triggers hyperdrive speed boost.
  */
-function DraggableUfo({ className, portalRef, onAbsorb }) {
+function DraggableUfo({ className, portalRef, onAbsorb, onBoost }) {
   const [dragging, setDragging] = useState(false);
   const [pos, setPos] = useState(null); // { x, y } viewport coordinates
   const [returning, setReturning] = useState(false);
   const [absorbed, setAbsorbed] = useState(false);
+  const [boosted, setBoosted] = useState(false);
   const [trails, setTrails] = useState([]); // [{ id, x, y }] particle trails
   const shipRef = useRef(null);
   const offsetRef = useRef({ x: 0, y: 0 });
+  const startTimeRef = useRef(0);
+  const startPosRef = useRef({ x: 0, y: 0 });
 
   const handlePointerDown = useCallback((e) => {
     if (absorbed) return;
     e.preventDefault();
     e.stopPropagation();
+
+    startTimeRef.current = Date.now();
+    startPosRef.current = { x: e.clientX, y: e.clientY };
     
     const el = shipRef.current;
     if (!el) return;
 
-    // Use Pointer Capture to capture drag events even if cursor/finger leaves element bounds
     try {
       el.setPointerCapture(e.pointerId);
     } catch (err) {
@@ -85,7 +89,7 @@ function DraggableUfo({ className, portalRef, onAbsorb }) {
     const centerY = newY + 40;
     
     setTrails((prev) => [
-      ...prev.slice(-8), // Keep trailing count reasonable
+      ...prev.slice(-8), 
       { id: Date.now() + Math.random(), x: centerX, y: centerY }
     ]);
 
@@ -108,7 +112,6 @@ function DraggableUfo({ className, portalRef, onAbsorb }) {
           shipRef.current.releasePointerCapture(e.pointerId);
         } catch (err) {}
 
-        // Anchor coordinates exactly to center of the portal
         const targetShipX = portalCenterX - 45;
         const targetShipY = portalCenterY - 40;
         setPos({ x: targetShipX, y: targetShipY });
@@ -117,7 +120,6 @@ function DraggableUfo({ className, portalRef, onAbsorb }) {
           onAbsorb();
         }
 
-        // Wait for absorption animation, then respawn ship
         setTimeout(() => {
           setPos(null);
           setAbsorbed(false);
@@ -135,17 +137,42 @@ function DraggableUfo({ className, portalRef, onAbsorb }) {
     } catch (err) {}
 
     setDragging(false);
-    setReturning(true);
 
-    // Let transition finish, then reset position and restore CSS animation
-    setTimeout(() => {
-      setPos(null);
-      setReturning(false);
-      setTrails([]);
-    }, 600);
-  }, [dragging, absorbed]);
+    // Calculate if pointer action was a quick click/tap
+    const duration = Date.now() - startTimeRef.current;
+    const dx = e.clientX - startPosRef.current.x;
+    const dy = e.clientY - startPosRef.current.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-  // Build inline styles dynamically to override keyframes during drag states
+    if (duration < 280 && distance < 12) {
+      // Tap detected -> Activate Warp Speed Boost!
+      setBoosted(true);
+      setPos(null); // Release drag position to let CSS warp speed animation play instantly
+
+      const el = shipRef.current;
+      if (el && onBoost) {
+        const rect = el.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        onBoost(centerX, centerY);
+      }
+
+      // Boost lasts 6 seconds
+      setTimeout(() => {
+        setBoosted(false);
+      }, 6000);
+
+    } else {
+      // Regular release -> return smooth transition
+      setReturning(true);
+      setTimeout(() => {
+        setPos(null);
+        setReturning(false);
+        setTrails([]);
+      }, 600);
+    }
+  }, [dragging, absorbed, onBoost]);
+
   const style = {};
   if (absorbed && pos) {
     style.position = 'fixed';
@@ -191,7 +218,7 @@ function DraggableUfo({ className, portalRef, onAbsorb }) {
 
       <div
         ref={shipRef}
-        className={`ufo-ship ${className} ${dragging ? 'dragging' : ''}`}
+        className={`ufo-ship ${className} ${dragging ? 'dragging' : ''} ${boosted ? 'boosted' : ''}`}
         style={style}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -215,12 +242,10 @@ export default function UritorcoBackground() {
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
 
-    // Trigger mobile vibration if supported
     if (navigator.vibrate) {
       navigator.vibrate([60, 40, 60]);
     }
 
-    // Playful local Argentine/extraterrestrial jokes for abduction
     const alerts = [
       "¡Abducción Exitosa! 🛸",
       "¡Contacto del 3er Tipo! 👽",
@@ -237,7 +262,6 @@ export default function UritorcoBackground() {
     setToasts((prev) => [...prev, { id, text, x, y }]);
     setPulses((prev) => [...prev, { id, x, y }]);
 
-    // Auto cleanup toasts and portal pulses
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 1600);
@@ -247,110 +271,122 @@ export default function UritorcoBackground() {
     }, 1200);
   }, []);
 
+  const handleBoost = useCallback((x, y) => {
+    if (navigator.vibrate) {
+      navigator.vibrate([40]);
+    }
+
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, text: "¡HIPERVELOCIDAD! ⚡🚀", x, y }]);
+
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 1500);
+  }, []);
+
   return (
-    <div className="uritorco-bg-container">
-      {/* Stars */}
-      {STARS_DATA.map((star) => (
-        <div
-          key={star.id}
-          className="star"
-          style={{
-            top: star.top,
-            left: star.left,
-            width: star.size,
-            height: star.size,
-            animationDelay: star.delay,
-            animationDuration: star.duration,
-          }}
-        />
-      ))}
+    <>
+      {/* Background Starry & Mountain Layer (z-index: 0) */}
+      <div className="uritorco-bg-container">
+        {/* Stars */}
+        {STARS_DATA.map((star) => (
+          <div
+            key={star.id}
+            className="star"
+            style={{
+              top: star.top,
+              left: star.left,
+              width: star.size,
+              height: star.size,
+              animationDelay: star.delay,
+              animationDuration: star.duration,
+            }}
+          />
+        ))}
 
-      {/* Draggable UFOs with portal ref and abduction callbacks */}
-      <DraggableUfo className="ufo-entering" portalRef={portalRef} onAbsorb={handleAbsorb} />
-      <DraggableUfo className="ufo-exiting" portalRef={portalRef} onAbsorb={handleAbsorb} />
-      <DraggableUfo className="ufo-peak-hover" portalRef={portalRef} onAbsorb={handleAbsorb} />
+        {/* Mountain SVG at the bottom */}
+        <div className="uritorco-mountain-wrapper">
+          <svg viewBox="0 0 1000 400" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
+            <defs>
+              <linearGradient id="mountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#120c1f" />
+                <stop offset="100%" stopColor="#0b0c10" />
+              </linearGradient>
+              <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#9d4edd" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#39ff14" stopOpacity="0" />
+              </linearGradient>
+              <filter id="portalGlow">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+              <filter id="mountainGlow">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
 
-      {/* Floating portal abduction toasts rendered in fixed viewport space */}
-      {toasts.map((t) => (
-        <div key={t.id} className="portal-toast" style={{ left: `${t.x}px`, top: `${t.y}px` }}>
-          {t.text}
-        </div>
-      ))}
+            {/* Glowing energy fields */}
+            <circle cx="500" cy="200" r="180" fill="url(#glowGrad)" />
 
-      {/* Mountain SVG at the bottom */}
-      <div className="uritorco-mountain-wrapper">
-        {/* Render portal shockwaves relative to mountain wrapper coordinates */}
-        {pulses.map((p) => {
-          const wrapperEl = document.querySelector('.uritorco-mountain-wrapper');
-          if (!wrapperEl) return null;
-          const mRect = wrapperEl.getBoundingClientRect();
-          const rx = p.x - mRect.left;
-          const ry = p.y - mRect.top;
-          return (
-            <div
-              key={p.id}
-              className="portal-shockwave"
-              style={{ left: `${rx}px`, top: `${ry}px` }}
+            {/* Mount Uritorco ridge silhouette */}
+            <path
+              d="M-50,400 L80,280 L220,330 L500,120 L720,320 L880,270 L1050,400 Z"
+              fill="url(#mountainGrad)"
+              stroke="var(--primary)"
+              strokeWidth="2"
+              filter="url(#mountainGlow)"
             />
-          );
-        })}
 
-        <svg viewBox="0 0 1000 400" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
-          <defs>
-            <linearGradient id="mountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#120c1f" />
-              <stop offset="100%" stopColor="#0b0c10" />
-            </linearGradient>
-            <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#9d4edd" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#39ff14" stopOpacity="0" />
-            </linearGradient>
-            <filter id="portalGlow">
-              <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-            <filter id="mountainGlow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
+            {/* Solid base */}
+            <rect x="-50" y="398" width="1100" height="10" fill="#0b0c10" />
 
-          {/* Glowing energy fields */}
-          <circle cx="500" cy="200" r="180" fill="url(#glowGrad)" />
-
-          {/* Mount Uritorco ridge silhouette */}
-          <path
-            d="M-50,400 L80,280 L220,330 L500,120 L720,320 L880,270 L1050,400 Z"
-            fill="url(#mountainGrad)"
-            stroke="var(--primary)"
-            strokeWidth="2"
-            filter="url(#mountainGlow)"
-          />
-
-          {/* Solid base */}
-          <rect x="-50" y="398" width="1100" height="10" fill="#0b0c10" />
-
-          {/* Pulse portal cave in center */}
-          <ellipse
-            ref={portalRef}
-            cx="500"
-            cy="280"
-            rx="25"
-            ry="35"
-            fill="var(--secondary)"
-            filter="url(#portalGlow)"
-            opacity="0.8"
-            className="portal-pulse"
-          />
-          <ellipse cx="500" cy="280" rx="10" ry="15" fill="#ffffff" opacity="0.95" />
-        </svg>
+            {/* Pulse portal cave in center */}
+            <ellipse
+              ref={portalRef}
+              cx="500"
+              cy="280"
+              rx="25"
+              ry="35"
+              fill="var(--secondary)"
+              filter="url(#portalGlow)"
+              opacity="0.8"
+              className="portal-pulse"
+            />
+            <ellipse cx="500" cy="280" rx="10" ry="15" fill="#ffffff" opacity="0.95" />
+          </svg>
+        </div>
       </div>
-    </div>
+
+      {/* Foreground Touch Interactive Layer (z-index: 20) */}
+      <div className="ufo-foreground-container">
+        {/* Render portal shockwaves globally in foreground */}
+        {pulses.map((p) => (
+          <div
+            key={p.id}
+            className="portal-shockwave"
+            style={{ left: `${p.x}px`, top: `${p.y}px` }}
+          />
+        ))}
+
+        {/* Draggable UFOs with portal ref and abduction / boost callbacks */}
+        <DraggableUfo className="ufo-entering" portalRef={portalRef} onAbsorb={handleAbsorb} onBoost={handleBoost} />
+        <DraggableUfo className="ufo-exiting" portalRef={portalRef} onAbsorb={handleAbsorb} onBoost={handleBoost} />
+        <DraggableUfo className="ufo-peak-hover" portalRef={portalRef} onAbsorb={handleAbsorb} onBoost={handleBoost} />
+
+        {/* Floating portal toasts */}
+        {toasts.map((t) => (
+          <div key={t.id} className="portal-toast" style={{ left: `${t.x}px`, top: `${t.y}px` }}>
+            {t.text}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

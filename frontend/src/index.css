@@ -428,6 +428,19 @@ h1, h2, h3 {
   background-image: radial-gradient(circle at 50% 20%, rgba(157, 78, 221, 0.25) 0%, var(--background) 80%);
 }
 
+.ufo-foreground-container {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 600px;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 20; /* Layered above everything else, including .content (z-index 1) and forms */
+  pointer-events: none;
+}
+
 .star {
   position: absolute;
   background-color: #ffffff;
@@ -597,12 +610,12 @@ h1, h2, h3 {
 
 /* Portal shockwave rings */
 .portal-shockwave {
-  position: absolute;
+  position: fixed; /* Fixed viewport positioning */
   border: 2.5px solid var(--secondary);
   border-radius: 50%;
   pointer-events: none;
   transform: translate(-50%, -50%);
-  z-index: 0;
+  z-index: 10;
   animation: portalWave 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
 }
 
@@ -660,6 +673,29 @@ h1, h2, h3 {
     margin-top: -95px;
     transform: translate(-50%, -50%) scale(0.85) rotate(-6deg);
   }
+}
+
+/* Hyperdrive speed boost states for UFOs */
+.ufo-ship.boosted svg {
+  animation: warpShake 0.15s infinite linear alternate !important;
+  filter: drop-shadow(0 0 15px var(--secondary)) drop-shadow(0 0 25px #ffffff) !important;
+}
+
+@keyframes warpShake {
+  from { transform: scale(1.25) skewX(-12deg) translateY(-1px); }
+  to { transform: scale(1.25) skewX(-12deg) translateY(1px); }
+}
+
+.ufo-entering.boosted {
+  animation-duration: 2.2s !important;
+}
+
+.ufo-exiting.boosted {
+  animation-duration: 2.5s !important;
+}
+
+.ufo-peak-hover.boosted {
+  animation-duration: 3s !important;
 }
 
 /* Container for Login Page elements to support scroll & z-index overlay */
