@@ -52,6 +52,15 @@ export default function GroupDetail() {
   const [linkError, setLinkError] = useState('');
   const [linkSuccess, setLinkSuccess] = useState('');
 
+  // Edición y eliminación de miembros
+  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
+  const [editMemberName, setEditMemberName] = useState('');
+  const [editMemberError, setEditMemberError] = useState('');
+  const [editMemberSuccess, setEditMemberSuccess] = useState('');
+  const [showDeleteMemberConfirm, setShowDeleteMemberConfirm] = useState(null);
+  const [deleteMemberError, setDeleteMemberError] = useState('');
+
   // Comprobantes / Tickets
   const [receiptBase64, setReceiptBase64] = useState('');
   const [receiptMimeType, setReceiptMimeType] = useState('');
@@ -397,6 +406,64 @@ export default function GroupDetail() {
     }
   };
 
+  const handleEditMember = async (e) => {
+    e.preventDefault();
+    setEditMemberError('');
+    setEditMemberSuccess('');
+    if (!editingMember) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/groups/${id}/members/${editingMember.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ full_name: editMemberName })
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Error al actualizar miembro');
+      }
+
+      setEditMemberSuccess('¡Miembro actualizado con éxito!');
+      setTimeout(() => {
+        setShowEditMemberModal(false);
+        setEditingMember(null);
+        setEditMemberName('');
+        setEditMemberSuccess('');
+      }, 1500);
+      fetchGroupData();
+    } catch (err) {
+      setEditMemberError(err.message);
+    }
+  };
+
+  const handleDeleteMember = async () => {
+    setDeleteMemberError('');
+    if (!showDeleteMemberConfirm) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/groups/${id}/members/${showDeleteMemberConfirm.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Error al eliminar miembro');
+      }
+
+      setShowDeleteMemberConfirm(null);
+      fetchGroupData();
+    } catch (err) {
+      setDeleteMemberError(err.message);
+    }
+  };
+
   if (loading) return <div className="p-4 text-center">Cargando...</div>;
   if (!group) return <div className="p-4 text-center">Gasto no encontrado</div>;
 
@@ -643,16 +710,47 @@ export default function GroupDetail() {
                       )}
                     </span>
                   </div>
-                  {!m.email && (
-                    <button
-                      onClick={() => { setLinkingMember(m); setShowLinkModal(true); }}
-                      className="btn btn-secondary text-xs flex items-center gap-1"
-                      style={{ width: 'auto', padding: '4px 8px', fontSize: '0.75rem', border: '1px solid var(--primary)', color: 'var(--primary)', height: 'auto' }}
-                      title="Vincular con una cuenta de correo"
-                    >
-                      <Link2 size={12} /> Vincular
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {!m.email && (
+                      <button
+                        onClick={() => { setLinkingMember(m); setShowLinkModal(true); }}
+                        className="btn btn-secondary text-xs flex items-center gap-1"
+                        style={{ width: 'auto', padding: '4px 8px', fontSize: '0.75rem', border: '1px solid var(--primary)', color: 'var(--primary)', height: 'auto' }}
+                        title="Vincular con una cuenta de correo"
+                      >
+                        <Link2 size={12} /> Vincular
+                      </button>
+                    )}
+                    {group && user && group.creator_id === user.id && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingMember(m);
+                            setEditMemberName(m.full_name || '');
+                            setShowEditMemberModal(true);
+                          }}
+                          className="btn btn-secondary text-xs flex items-center justify-center p-1.5"
+                          style={{ width: 'auto', height: 'auto', border: '1px solid var(--border)', color: 'var(--text-light)', backgroundColor: 'transparent' }}
+                          title="Editar Miembro"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        {m.id !== user.id && (
+                          <button
+                            onClick={() => {
+                              setShowDeleteMemberConfirm(m);
+                              setDeleteMemberError('');
+                            }}
+                            className="btn btn-secondary text-xs flex items-center justify-center p-1.5"
+                            style={{ width: 'auto', height: 'auto', border: '1px solid var(--border)', color: 'var(--danger)', backgroundColor: 'transparent' }}
+                            title="Eliminar Miembro"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -893,6 +991,54 @@ export default function GroupDetail() {
             >
               Cerrar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Miembro */}
+      {showEditMemberModal && editingMember && (
+        <div className="modal-overlay">
+          <div className="card w-full animate-fade-in" style={{ maxWidth: '400px' }}>
+            <h2 className="mb-2">Editar Miembro</h2>
+            <p className="text-sm text-muted mb-4">
+              Modifica el nombre del participante del grupo.
+            </p>
+            <form onSubmit={handleEditMember}>
+              <div className="input-group">
+                <label>Nombre Completo</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  value={editMemberName} 
+                  onChange={e => setEditMemberName(e.target.value)} 
+                  required 
+                />
+              </div>
+              {editMemberSuccess && <p className="text-xs text-success mb-2 font-medium">{editMemberSuccess}</p>}
+              {editMemberError && <p className="text-xs text-danger mb-2 font-medium">{editMemberError}</p>}
+              <div className="flex gap-2 mt-4">
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowEditMemberModal(false); setEditingMember(null); setEditMemberName(''); setEditMemberError(''); }}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">Guardar Cambios</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Eliminación de Miembro */}
+      {showDeleteMemberConfirm && (
+        <div className="modal-overlay">
+          <div className="card w-full animate-fade-in" style={{ maxWidth: '400px' }}>
+            <h2 className="mb-4 text-danger">¿Eliminar Miembro?</h2>
+            <p className="text-sm text-muted mb-6">
+              ¿Estás seguro de que deseas eliminar a <strong>"{showDeleteMemberConfirm.full_name}"</strong> del grupo? 
+              Si es un participante temporal (local) y no pertenece a otros grupos, se eliminará su perfil de forma permanente.
+            </p>
+            {deleteMemberError && <p className="text-xs text-danger mb-4 font-medium">{deleteMemberError}</p>}
+            <div className="flex gap-2">
+              <button type="button" className="btn btn-secondary" onClick={() => { setShowDeleteMemberConfirm(null); setDeleteMemberError(''); }}>Cancelar</button>
+              <button type="button" className="btn btn-danger" onClick={handleDeleteMember} style={{ backgroundColor: 'var(--danger)', color: 'white' }}>Eliminar</button>
+            </div>
           </div>
         </div>
       )}

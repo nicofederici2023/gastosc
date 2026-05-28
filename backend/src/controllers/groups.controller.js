@@ -381,6 +381,163 @@ const linkLocalMember = async (req, res) => {
   }
 };
 
+const updateMember = async (req, res) => {
+  try {
+    const { id: groupId, memberId } = req.params;
+    const { full_name } = req.body;
+
+    if (!full_name || !full_name.trim()) {
+      return res.status(400).json({ error: 'El nombre es requerido' });
+    }
+
+    // Verify the requesting user is the group creator
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('creator_id')
+      .eq('id', groupId)
+      .single();
+
+    if (groupError || !group) {
+      return res.status(404).json({ error: 'Grupo no encontrado' });
+    }
+
+    if (group.creator_id !== req.user.id) {
+      return res.status(403).json({ error: 'Solo el creador del grupo puede editar miembros' });
+    }
+
+    // Verify the member belongs to this group
+    const { data: membership, error: memError } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('profile_id', memberId)
+      .maybeSingle();
+
+    if (memError || !membership) {
+      return res.status(404).json({ error: 'El miembro no pertenece a este grupo' });
+    }
+
+    // Update the profile name
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from('profiles')
+      .update({ full_name: full_name.trim() })
+      .eq('id', memberId)
+      .select('id, full_name, email')
+      .single();
+
+    if (updateError) throw updateError;
+
+    res.status(200).json({ message: 'Miembro actualizado con éxito', profile: updatedProfile });
+  } catch (error) {
+    console.error('Error updating member:', error.message);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+const removeMember = async (req, res) => {
+  try {
+    const { id: groupId, memberId } = req.params;
+
+    // Verify the requesting user is the group creator
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('creator_id')
+      .eq('id', groupId)
+      .single();
+
+    if (groupError || !group) {
+      return res.status(404).json({ error: 'Grupo no encontrado' });
+    }
+
+    if (group.creator_id !== req.user.id) {
+      return res.status(403).json({ error: 'Solo el creador del grupo puede eliminar miembros' });
+    }
+
+    // Cannot remove the creator themselves
+    if (memberId === req.user.id) {
+      return res.status(400).json({ error: 'No podés eliminarte a vos mismo del grupo' });
+    }
+
+    // Check if the member has any expenses paid in this group
+    const { data: paidExpenses, error: paidError } = await supabase
+      .from('expenses')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('paid_by_id', memberId)
+      .limit(1);
+
+    if (paidError) throw paidError;
+
+    if (paidExpenses && paidExpenses.length > 0) {
+      return res.status(400).json({ error: 'No se puede eliminar un miembro que tiene gastos pagados. Eliminá o reasigná sus gastos primero.' });
+    }
+
+    // Check if the member has any expense shares in this group
+    const { data: groupExpenses } = await supabase
+      .from('expenses')
+      .select('id')
+      .eq('group_id', groupId);
+
+    const expenseIds = groupExpenses ? groupExpenses.map(e => e.id) : [];
+
+    if (expenseIds.length > 0) {
+      const { data: memberShares, error: sharesError } = await supabase
+        .from('expense_shares')
+        .select('id')
+        .in('expense_id', expenseIds)
+        .eq('profile_id', memberId)
+        .limit(1);
+
+      if (sharesError) throw sharesError;
+
+      if (memberShares && memberShares.length > 0) {
+        return res.status(400).json({ error: 'No se puede eliminar un miembro que participa en gastos. Eliminá los gastos donde participa primero.' });
+      }
+    }
+
+    // Check if member is local (no email) to also delete phantom profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', memberId)
+      .single();
+
+    // Remove from group_members
+    const { error: deleteMemError } = await supabase
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId)
+      .eq('profile_id', memberId);
+
+    if (deleteMemError) throw deleteMemError;
+
+    // If local/phantom member, delete the phantom profile too
+    if (profile && !profile.email) {
+      // Check if the phantom is in any other group
+      const { data: otherGroups } = await supabase
+        .from('group_members')
+        .select('id')
+        .eq('profile_id', memberId)
+        .limit(1);
+
+      if (!otherGroups || otherGroups.length === 0) {
+        await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', memberId);
+      }
+    }
+
+    // Recalculate group balances
+    await recalculateGroupBalances(groupId);
+
+    res.status(200).json({ message: 'Miembro eliminado con éxito' });
+  } catch (error) {
+    console.error('Error removing member:', error.message);
+    res.status(400).json({ error: error.message });
+  }
+};
+
 module.exports = {
   createGroup,
   getGroups,
@@ -391,6 +548,8 @@ module.exports = {
   getGroupMembers,
   addMemberByEmail,
   addLocalMember,
-  linkLocalMember
+  linkLocalMember,
+  updateMember,
+  removeMember
 };
 
