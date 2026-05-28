@@ -697,20 +697,22 @@ export default function GroupDetail() {
             <ul className="list-none">
               {members.map(m => (
                 <li key={m.id} className="py-2 border-b border-gray-100 last:border-0 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs" style={{ backgroundColor: 'var(--primary)', color: 'white' }}>
+                  <div className="flex items-center gap-3" style={{ minWidth: 0, flex: 1 }}>
+                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs" style={{ backgroundColor: 'var(--primary)', color: 'white', flexShrink: 0 }}>
                       {m.full_name?.charAt(0).toUpperCase()}
                     </div>
-                    <span className="flex items-center gap-2">
-                      <span>{m.full_name} {m.id === user.id ? '(Vos)' : ''}</span>
+                    <span className="flex items-center gap-2" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {m.full_name} {m.id === user.id ? '(Vos)' : ''}
+                      </span>
                       {!m.email && (
-                        <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '999px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontWeight: '600' }}>
+                        <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '999px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontWeight: '600', flexShrink: 0 }}>
                           Local
                         </span>
                       )}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                     {!m.email && (
                       <button
                         onClick={() => { setLinkingMember(m); setShowLinkModal(true); }}
