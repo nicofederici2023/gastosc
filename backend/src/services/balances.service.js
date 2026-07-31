@@ -67,15 +67,27 @@ const recalculateGroupBalances = async (groupId) => {
     // 3.5. Round netBalances to nearest 100 cents (whole peso) to avoid decimals in settlements
     let sum = 0;
     const profileIds = Object.keys(netBalances);
-    for (let k = 0; k < profileIds.length - 1; k++) {
-      const pid = profileIds[k];
-      const rounded = Math.round(netBalances[pid] / 100) * 100;
-      netBalances[pid] = rounded;
-      sum += rounded;
+    
+    // First pass: round everyone to nearest 100
+    for (const pid of profileIds) {
+      netBalances[pid] = Math.round(netBalances[pid] / 100) * 100;
+      sum += netBalances[pid];
     }
-    if (profileIds.length > 0) {
-      const lastPid = profileIds[profileIds.length - 1];
-      netBalances[lastPid] = -sum;
+    
+    // Second pass: distribute the rounding error (sum) 1 peso at a time
+    // sum is always a multiple of 100 cents
+    let errorToDistribute = sum;
+    let i = 0;
+    while (errorToDistribute !== 0 && profileIds.length > 0) {
+      const pid = profileIds[i % profileIds.length];
+      if (errorToDistribute > 0) {
+        netBalances[pid] -= 100;
+        errorToDistribute -= 100;
+      } else {
+        netBalances[pid] += 100;
+        errorToDistribute += 100;
+      }
+      i++;
     }
 
     // 4. Calcular el plan simplificado de liquidación de deudas

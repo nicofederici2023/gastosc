@@ -458,6 +458,8 @@ const removeMember = async (req, res) => {
       return res.status(400).json({ error: 'No podés eliminarte a vos mismo del grupo' });
     }
 
+    const force = req.query.force === 'true';
+
     // Check if the member has any expenses paid in this group
     const { data: paidExpenses, error: paidError } = await supabase
       .from('expenses')
@@ -469,7 +471,7 @@ const removeMember = async (req, res) => {
     if (paidError) throw paidError;
 
     if (paidExpenses && paidExpenses.length > 0) {
-      return res.status(400).json({ error: 'No se puede eliminar un miembro que tiene gastos pagados. Eliminá o reasigná sus gastos primero.' });
+      return res.status(400).json({ error: 'No se puede eliminar porque este miembro pagó gastos. Debes borrarlos o cambiar el pagador de esos gastos primero.' });
     }
 
     // Check if the member has any expense shares in this group
@@ -491,7 +493,18 @@ const removeMember = async (req, res) => {
       if (sharesError) throw sharesError;
 
       if (memberShares && memberShares.length > 0) {
-        return res.status(400).json({ error: 'No se puede eliminar un miembro que participa en gastos. Eliminá los gastos donde participa primero.' });
+        if (force) {
+          // Delete their expense shares
+          const { error: deleteSharesError } = await supabase
+            .from('expense_shares')
+            .delete()
+            .in('expense_id', expenseIds)
+            .eq('profile_id', memberId);
+            
+          if (deleteSharesError) throw deleteSharesError;
+        } else {
+          return res.status(400).json({ error: 'No se puede eliminar un miembro que participa en gastos. Eliminá los gastos donde participa primero o forzá la eliminación.' });
+        }
       }
     }
 

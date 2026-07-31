@@ -460,20 +460,20 @@ export default function GroupDetail() {
   };
 
   const handleDeleteMember = async () => {
-    setDeleteMemberError('');
     if (!showDeleteMemberConfirm) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/groups/${id}/members/${showDeleteMemberConfirm.id}`, {
+      setDeleteMemberError('');
+      const response = await fetch(`${API_URL}/api/groups/${id}/members/${showDeleteMemberConfirm.id}?force=true`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
       });
 
-      const resData = await response.json();
       if (!response.ok) {
-        throw new Error(resData.error || 'Error al eliminar miembro');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al eliminar miembro');
       }
 
       setShowDeleteMemberConfirm(null);
@@ -497,7 +497,7 @@ export default function GroupDetail() {
       const totalCents = realExpenses.reduce((sum, e) => sum + e.amount_cents, 0);
       const totalPesos = totalCents / 100;
       const numMembers = members.length;
-      const avgPesos = numMembers > 0 ? (totalPesos / numMembers) : 0;
+      const avgPesos = numMembers > 0 ? Math.round(totalPesos / numMembers) : 0;
 
       doc.setFontSize(14);
       doc.setTextColor(0);
@@ -505,8 +505,8 @@ export default function GroupDetail() {
       
       doc.setFontSize(12);
       doc.setTextColor(80);
-      doc.text(`Gasto Total del Grupo: $${totalPesos.toFixed(2)}`, 40, 110);
-      doc.text(`Gasto promedio por persona: $${avgPesos.toFixed(2)}`, 40, 130);
+      doc.text(`Gasto Total del Grupo: $${Math.round(totalPesos)}`, 40, 110);
+      doc.text(`Gasto promedio por persona: $${avgPesos}`, 40, 130);
 
       doc.setFontSize(14);
       doc.setTextColor(0);
@@ -1172,12 +1172,14 @@ export default function GroupDetail() {
             <h2 className="mb-4 text-danger">¿Eliminar Miembro?</h2>
             <p className="text-sm text-muted mb-6">
               ¿Estás seguro de que deseas eliminar a <strong>"{showDeleteMemberConfirm.full_name}"</strong> del grupo? 
-              Si es un participante temporal (local) y no pertenece a otros grupos, se eliminará su perfil de forma permanente.
+              Si participaba en algún gasto, se lo desvinculará automáticamente y esos montos se dividirán entre el resto.
+              <br/><br/>
+              <em>Nota: Si esta persona pagó algún gasto, el sistema no te dejará eliminarlo hasta que le reasignes esos gastos a otro pagador.</em>
             </p>
             {deleteMemberError && <p className="text-xs text-danger mb-4 font-medium">{deleteMemberError}</p>}
             <div className="flex gap-2">
               <button type="button" className="btn btn-secondary" onClick={() => { setShowDeleteMemberConfirm(null); setDeleteMemberError(''); }}>Cancelar</button>
-              <button type="button" className="btn btn-danger" onClick={handleDeleteMember} style={{ backgroundColor: 'var(--danger)', color: 'white' }}>Eliminar</button>
+              <button type="button" className="btn btn-danger" onClick={handleDeleteMember} style={{ backgroundColor: 'var(--danger)', color: 'white' }}>Forzar Eliminación</button>
             </div>
           </div>
         </div>
