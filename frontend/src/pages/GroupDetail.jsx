@@ -482,12 +482,26 @@ export default function GroupDetail() {
       doc.setTextColor(100);
       doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 40, 60);
 
+      const realExpenses = expenses.filter(e => !e.description.startsWith('Liquidación:'));
+      const totalCents = realExpenses.reduce((sum, e) => sum + e.amount_cents, 0);
+      const totalPesos = totalCents / 100;
+      const numMembers = members.length;
+      const avgPesos = numMembers > 0 ? (totalPesos / numMembers) : 0;
+
       doc.setFontSize(14);
       doc.setTextColor(0);
-      doc.text('Gastos', 40, 90);
+      doc.text('Resumen', 40, 90);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(80);
+      doc.text(`Gasto Total del Grupo: $${totalPesos.toFixed(2)}`, 40, 110);
+      doc.text(`Gasto promedio por persona: $${avgPesos.toFixed(2)}`, 40, 130);
 
-      const expensesData = expenses
-        .filter(e => !e.description.startsWith('Liquidación:'))
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text('Detalle de Gastos', 40, 160);
+
+      const expensesData = realExpenses
         .map(e => [
           new Date(e.created_at).toLocaleDateString(),
           e.description.includes(' || receipt:') ? e.description.split(' || receipt:')[0] : e.description,
@@ -496,7 +510,7 @@ export default function GroupDetail() {
         ]);
 
       autoTable(doc, {
-        startY: 100,
+        startY: 170,
         head: [['Fecha', 'Descripción', 'Pagado por', 'Monto']],
         body: expensesData,
         theme: 'grid',
@@ -572,7 +586,7 @@ export default function GroupDetail() {
               {expenses.length === 0 ? <p className="text-muted text-center py-4">No hay gastos aún.</p> : null}
               {expenses.map(exp => {
                 const isSettlement = exp.description.startsWith('Liquidación:');
-                const canModify = exp.paid_by_id === user.id;
+                const canModify = exp.paid_by_id === user.id || group?.creator_id === user.id;
 
                 if (isSettlement) {
                   return (
