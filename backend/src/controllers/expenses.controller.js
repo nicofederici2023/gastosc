@@ -38,14 +38,16 @@ const uploadReceiptToSupabase = async (base64Data, mimeType, expenseId) => {
 const createExpense = async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { description, amount_cents, currency, date, split_among, receipt_base64, receipt_mime_type } = req.body;
+    const { description, amount_cents, currency, date, split_among, receipt_base64, receipt_mime_type, paid_by_id } = req.body;
+    
+    const payerId = paid_by_id || req.user.id;
 
     // 1. Insert expense
     const { data: expense, error: expenseError } = await supabase
       .from('expenses')
       .insert([{
         group_id: groupId,
-        paid_by_id: req.user.id,
+        paid_by_id: payerId,
         description,
         amount_cents,
         currency: currency || 'ARS',
@@ -79,7 +81,7 @@ const createExpense = async (req, res) => {
       const sharesToInsert = split_among.map(profileId => ({
         expense_id: expense.id,
         profile_id: profileId,
-        share_type: profileId === req.user.id ? 'paid_and_split' : 'split' 
+        share_type: profileId === payerId ? 'paid_and_split' : 'split' 
       }));
 
       const { error: sharesError } = await supabase
@@ -146,12 +148,12 @@ const getExpenseById = async (req, res) => {
 const updateExpense = async (req, res) => {
   try {
     const { id } = req.params;
-    const { description, amount_cents, currency, date, split_among, receipt_base64, receipt_mime_type } = req.body;
+    const { description, amount_cents, currency, date, split_among, receipt_base64, receipt_mime_type, paid_by_id } = req.body;
 
     // 1. Get old expense to verify ownership and get group_id & description
     const { data: oldExpense, error: fetchError } = await supabase
       .from('expenses')
-      .select('group_id, paid_by_id, description')
+      .select('group_id, paid_by_id, description, groups!inner(creator_id)')
       .eq('id', id)
       .single();
 
@@ -159,9 +161,14 @@ const updateExpense = async (req, res) => {
       return res.status(404).json({ error: 'Gasto no encontrado' });
     }
 
-    if (oldExpense.paid_by_id !== req.user.id) {
+    const isPayer = oldExpense.paid_by_id === req.user.id;
+    const isCreator = oldExpense.groups?.creator_id === req.user.id;
+
+    if (!isPayer && !isCreator) {
       return res.status(403).json({ error: 'No tienes permiso para editar este gasto' });
     }
+    
+    const payerId = paid_by_id || oldExpense.paid_by_id;
 
     // 2. Determine final description (preserve, update, or remove receipt)
     let finalDescription = description;
@@ -186,6 +193,7 @@ const updateExpense = async (req, res) => {
     const { data: expense, error: updateError } = await supabase
       .from('expenses')
       .update({ 
+        paid_by_id: payerId,
         description: finalDescription, 
         amount_cents, 
         currency: currency || 'ARS', 
@@ -209,7 +217,7 @@ const updateExpense = async (req, res) => {
       const sharesToInsert = split_among.map(profileId => ({
         expense_id: id,
         profile_id: profileId,
-        share_type: profileId === req.user.id ? 'paid_and_split' : 'split'
+        share_type: profileId === payerId ? 'paid_and_split' : 'split'
       }));
 
       const { error: insertSharesError } = await supabase
@@ -235,15 +243,18 @@ const deleteExpense = async (req, res) => {
     // 1. Get old expense to verify ownership and get group_id
     const { data: oldExpense, error: fetchError } = await supabase
       .from('expenses')
-      .select('group_id, paid_by_id')
+      .select('group_id, paid_by_id, groups!inner(creator_id)')
       .eq('id', id)
       .single();
 
     if (fetchError || !oldExpense) {
       return res.status(404).json({ error: 'Gasto no encontrado' });
     }
+    
+    const isPayer = oldExpense.paid_by_id === req.user.id;
+    const isCreator = oldExpense.groups?.creator_id === req.user.id;
 
-    if (oldExpense.paid_by_id !== req.user.id) {
+    if (!isPayer && !isCreator) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar este gasto' });
     }
 

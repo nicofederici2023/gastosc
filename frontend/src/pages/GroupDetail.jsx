@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Receipt, Users, Calculator, Plus, ArrowRightLeft, Edit2, Trash2, Link2, Camera, Eye } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -24,6 +26,7 @@ export default function GroupDetail() {
   const [expDesc, setExpDesc] = useState('');
   const [expAmount, setExpAmount] = useState('');
   const [selectedSplitMembers, setSelectedSplitMembers] = useState([]);
+  const [expPaidBy, setExpPaidBy] = useState('');
 
   // Modal de editar gasto
   const [showEditModal, setShowEditModal] = useState(false);
@@ -31,6 +34,7 @@ export default function GroupDetail() {
   const [editDesc, setEditDesc] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [editSelectedSplitMembers, setEditSelectedSplitMembers] = useState([]);
+  const [editPaidBy, setEditPaidBy] = useState('');
 
   // Confirmar eliminación de gasto
   const [showDeleteExpenseConfirm, setShowDeleteExpenseConfirm] = useState(null);
@@ -125,6 +129,7 @@ export default function GroupDetail() {
     setReceiptBase64('');
     setReceiptMimeType('');
     setReceiptPreviewUrl('');
+    setExpPaidBy(user?.id || (members[0] ? members[0].id : ''));
     setShowExpenseModal(true);
   };
 
@@ -161,6 +166,7 @@ export default function GroupDetail() {
       ? expense.expense_shares.filter(s => s.share_type !== 'settlement_recipient').map(s => s.profile_id)
       : [];
     setEditSelectedSplitMembers(activeParticipants);
+    setEditPaidBy(expense.paid_by_id || user?.id);
     setShowEditModal(true);
   };
 
@@ -212,7 +218,8 @@ export default function GroupDetail() {
           currency: 'ARS',
           split_among: selectedSplitMembers,
           receipt_base64: receiptBase64 || undefined,
-          receipt_mime_type: receiptMimeType || undefined
+          receipt_mime_type: receiptMimeType || undefined,
+          paid_by_id: expPaidBy
         })
       });
 
@@ -251,7 +258,8 @@ export default function GroupDetail() {
           currency: 'ARS',
           split_among: editSelectedSplitMembers,
           receipt_base64: editReceiptBase64 ? editReceiptBase64 : (editReceiptRemoved ? null : undefined),
-          receipt_mime_type: editReceiptMimeType || undefined
+          receipt_mime_type: editReceiptMimeType || undefined,
+          paid_by_id: editPaidBy
         })
       });
 
@@ -464,6 +472,64 @@ export default function GroupDetail() {
     }
   };
 
+  const handleDownloadReport = () => {
+    try {
+      const doc = new jsPDF('p', 'pt', 'a4');
+      doc.setFontSize(18);
+      doc.text(`Reporte de Grupo: ${group?.name}`, 40, 40);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 40, 60);
+
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text('Gastos', 40, 90);
+
+      const expensesData = expenses
+        .filter(e => !e.description.startsWith('Liquidación:'))
+        .map(e => [
+          new Date(e.created_at).toLocaleDateString(),
+          e.description.includes(' || receipt:') ? e.description.split(' || receipt:')[0] : e.description,
+          e.profiles?.full_name || 'Alguien',
+          `$${(e.amount_cents / 100).toFixed(2)}`
+        ]);
+
+      autoTable(doc, {
+        startY: 100,
+        head: [['Fecha', 'Descripción', 'Pagado por', 'Monto']],
+        body: expensesData,
+        theme: 'grid',
+      });
+
+      const finalY = doc.lastAutoTable.finalY || 100;
+      
+      if (settlements.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text('Liquidación Óptima (Pagos recomendados)', 40, finalY + 40);
+
+        const setlData = settlements.map(s => [
+          s.from_profile?.full_name || 'Alguien',
+          s.to_profile?.full_name || 'Alguien',
+          `$${(s.amount_cents / 100).toFixed(2)}`
+        ]);
+
+        autoTable(doc, {
+          startY: finalY + 50,
+          head: [['Quién Paga', 'A Quién Paga', 'Monto']],
+          body: setlData,
+          theme: 'grid',
+        });
+      }
+
+      doc.save(`Reporte_${group?.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error("Error generating report:", error);
+      alert("Hubo un error al generar el reporte PDF. Asegurate de que la app se recargó correctamente.");
+    }
+  };
+
   if (loading) return <div className="p-4 text-center">Cargando...</div>;
   if (!group) return <div className="p-4 text-center">Gasto no encontrado</div>;
 
@@ -494,9 +560,14 @@ export default function GroupDetail() {
       <div className="content-area">
         {activeTab === 'expenses' && (
           <div>
-            <button className="btn btn-primary mb-4" onClick={openExpenseModal}>
-              <Plus size={18} /> Añadir Gasto
-            </button>
+            <div className="flex gap-2 mb-4">
+              <button className="btn btn-primary" onClick={openExpenseModal} style={{ flex: 1 }}>
+                <Plus size={18} /> Añadir Gasto
+              </button>
+              <button className="btn btn-secondary" onClick={handleDownloadReport} style={{ width: 'auto' }} title="Descargar Reporte">
+                ⬇ Reporte
+              </button>
+            </div>
             <div className="flex flex-col gap-3">
               {expenses.length === 0 ? <p className="text-muted text-center py-4">No hay gastos aún.</p> : null}
               {expenses.map(exp => {
@@ -604,11 +675,11 @@ export default function GroupDetail() {
                   <p className="text-muted text-center py-4 bg-gray-50 rounded-lg">¡Todos están al día! No hay transacciones pendientes 🎉</p>
                 ) : null}
                 {settlements.map((setl, idx) => (
-                  <div key={idx} className="card p-4 mb-0 flex justify-between items-center border-l-4 border-l-emerald-500" style={{ marginBottom: '0.75rem' }}>
-                    <div className="flex-1">
-                      <span className="font-semibold text-danger">{setl.from_profile?.full_name || 'Alguien'}</span>
-                      <span className="text-muted text-sm mx-1">debe pagarle a</span>
-                      <span className="font-semibold text-success">{setl.to_profile?.full_name || 'Alguien'}</span>
+                  <div key={idx} className="card p-4 mb-0 flex justify-between items-center border-l-4 border-l-emerald-500" style={{ marginBottom: '0.75rem', borderColor: 'var(--secondary)' }}>
+                    <div className="flex-1" style={{ fontSize: '0.95rem' }}>
+                      <span className="font-semibold text-danger" style={{ display: 'inline-block', marginRight: '6px' }}>{setl.from_profile?.full_name || 'Alguien'}</span>
+                      <span className="text-muted" style={{ display: 'inline-block', marginRight: '6px', fontSize: '0.85em' }}>debe pagarle a</span>
+                      <span className="font-semibold text-success" style={{ display: 'inline-block' }}>{setl.to_profile?.full_name || 'Alguien'}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="font-bold" style={{ whiteSpace: 'nowrap' }}>
@@ -698,7 +769,7 @@ export default function GroupDetail() {
               {members.map(m => (
                 <li key={m.id} className="py-2 border-b border-gray-100 last:border-0 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3" style={{ minWidth: 0, flex: 1 }}>
-                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs" style={{ backgroundColor: 'var(--primary)', color: 'white', flexShrink: 0 }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>
                       {m.full_name?.charAt(0).toUpperCase()}
                     </div>
                     <span className="flex items-center gap-2" style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
@@ -773,6 +844,14 @@ export default function GroupDetail() {
               <div className="input-group">
                 <label>Monto Total ($)</label>
                 <input type="number" step="0.01" className="input" value={expAmount} onChange={e => setExpAmount(e.target.value)} required />
+              </div>
+              <div className="input-group">
+                <label>Pagado por</label>
+                <select className="input" value={expPaidBy} onChange={e => setExpPaidBy(e.target.value)} required>
+                  {members.map(m => (
+                    <option key={m.id} value={m.id}>{m.full_name} {m.id === user?.id ? '(Vos)' : ''}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="input-group">
@@ -854,6 +933,14 @@ export default function GroupDetail() {
               <div className="input-group">
                 <label>Monto Total ($)</label>
                 <input type="number" step="0.01" className="input" value={editAmount} onChange={e => setEditAmount(e.target.value)} required />
+              </div>
+              <div className="input-group">
+                <label>Pagado por</label>
+                <select className="input" value={editPaidBy} onChange={e => setEditPaidBy(e.target.value)} required>
+                  {members.map(m => (
+                    <option key={m.id} value={m.id}>{m.full_name} {m.id === user?.id ? '(Vos)' : ''}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="input-group">
