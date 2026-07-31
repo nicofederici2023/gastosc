@@ -21,17 +21,17 @@ export default function GroupDetail() {
   const [activeTab, setActiveTab] = useState('expenses'); // expenses, balances, members
   const [loading, setLoading] = useState(true);
 
-  // Modal de añadir gasto
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [expDesc, setExpDesc] = useState('');
+  const [expComment, setExpComment] = useState('');
   const [expAmount, setExpAmount] = useState('');
   const [selectedSplitMembers, setSelectedSplitMembers] = useState([]);
   const [expPaidBy, setExpPaidBy] = useState('');
 
-  // Modal de editar gasto
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [editDesc, setEditDesc] = useState('');
+  const [editComment, setEditComment] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [editSelectedSplitMembers, setEditSelectedSplitMembers] = useState([]);
   const [editPaidBy, setEditPaidBy] = useState('');
@@ -126,6 +126,7 @@ export default function GroupDetail() {
 
   const openExpenseModal = () => {
     setSelectedSplitMembers(members.map(m => m.id));
+    setExpComment('');
     setReceiptBase64('');
     setReceiptMimeType('');
     setReceiptPreviewUrl('');
@@ -148,13 +149,22 @@ export default function GroupDetail() {
     
     let desc = expense.description;
     let existingReceiptUrl = '';
+    let existingComment = '';
+    
     if (desc.includes(' || receipt:')) {
       const parts = desc.split(' || receipt:');
       desc = parts[0];
       existingReceiptUrl = parts[1];
     }
+
+    if (desc.includes(' || comment:')) {
+      const parts = desc.split(' || comment:');
+      desc = parts[0];
+      existingComment = parts[1];
+    }
     
     setEditDesc(desc);
+    setEditComment(existingComment);
     setEditAmount((expense.amount_cents / 100).toString());
     setEditReceiptBase64('');
     setEditReceiptMimeType('');
@@ -213,7 +223,7 @@ export default function GroupDetail() {
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          description: expDesc,
+          description: expDesc + (expComment ? ' || comment:' + expComment : ''),
           amount_cents: amountCents,
           currency: 'ARS',
           split_among: selectedSplitMembers,
@@ -229,6 +239,7 @@ export default function GroupDetail() {
       
       setShowExpenseModal(false);
       setExpDesc('');
+      setExpComment('');
       setExpAmount('');
       setReceiptBase64('');
       setReceiptMimeType('');
@@ -253,7 +264,7 @@ export default function GroupDetail() {
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          description: editDesc,
+          description: editDesc + (editComment ? ' || comment:' + editComment : ''),
           amount_cents: amountCents,
           currency: 'ARS',
           split_among: editSelectedSplitMembers,
@@ -502,12 +513,23 @@ export default function GroupDetail() {
       doc.text('Detalle de Gastos', 40, 160);
 
       const expensesData = realExpenses
-        .map(e => [
-          new Date(e.created_at).toLocaleDateString(),
-          e.description.includes(' || receipt:') ? e.description.split(' || receipt:')[0] : e.description,
-          e.profiles?.full_name || 'Alguien',
-          `$${(e.amount_cents / 100).toFixed(2)}`
-        ]);
+        .map(e => {
+          let desc = e.description;
+          let comment = '';
+          if (desc.includes(' || receipt:')) desc = desc.split(' || receipt:')[0];
+          if (desc.includes(' || comment:')) {
+            const parts = desc.split(' || comment:');
+            desc = parts[0];
+            comment = parts[1];
+          }
+          const finalDesc = comment ? `${desc} (${comment})` : desc;
+          return [
+            new Date(e.created_at).toLocaleDateString(),
+            finalDesc,
+            e.profiles?.full_name || 'Alguien',
+            `$${(e.amount_cents / 100).toFixed(2)}`
+          ];
+        });
 
       autoTable(doc, {
         startY: 170,
@@ -621,10 +643,16 @@ export default function GroupDetail() {
 
                 let desc = exp.description;
                 let receiptUrl = '';
+                let comment = '';
                 if (desc.includes(' || receipt:')) {
                   const parts = desc.split(' || receipt:');
                   desc = parts[0];
                   receiptUrl = parts[1];
+                }
+                if (desc.includes(' || comment:')) {
+                  const parts = desc.split(' || comment:');
+                  desc = parts[0];
+                  comment = parts[1];
                 }
 
                 return (
@@ -644,7 +672,8 @@ export default function GroupDetail() {
                       )}
                       <div>
                         <h3 className="text-base">{desc}</h3>
-                        <p className="text-xs text-muted mb-1">Pagó {exp.profiles?.full_name || 'Miembro'}</p>
+                        {comment && <p className="text-sm text-muted mt-1">{comment}</p>}
+                        <p className="text-xs text-muted mb-1 mt-1">Pagó {exp.profiles?.full_name || 'Miembro'}</p>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
@@ -856,6 +885,10 @@ export default function GroupDetail() {
                 <input type="text" className="input" value={expDesc} onChange={e => setExpDesc(e.target.value)} required />
               </div>
               <div className="input-group">
+                <label>Comentario (Opcional)</label>
+                <input type="text" className="input" value={expComment} onChange={e => setExpComment(e.target.value)} placeholder="Ej: Fuimos todos menos Juan" />
+              </div>
+              <div className="input-group">
                 <label>Monto Total ($)</label>
                 <input type="number" step="0.01" className="input" value={expAmount} onChange={e => setExpAmount(e.target.value)} required />
               </div>
@@ -943,6 +976,10 @@ export default function GroupDetail() {
               <div className="input-group">
                 <label>Descripción</label>
                 <input type="text" className="input" value={editDesc} onChange={e => setEditDesc(e.target.value)} required />
+              </div>
+              <div className="input-group">
+                <label>Comentario (Opcional)</label>
+                <input type="text" className="input" value={editComment} onChange={e => setEditComment(e.target.value)} placeholder="Ej: Fuimos todos menos Juan" />
               </div>
               <div className="input-group">
                 <label>Monto Total ($)</label>
