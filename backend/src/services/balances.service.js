@@ -67,27 +67,40 @@ const recalculateGroupBalances = async (groupId) => {
     // 3.5. Round netBalances to nearest 100 cents (whole peso) to avoid decimals in settlements
     let sum = 0;
     const profileIds = Object.keys(netBalances);
+    const roundingErrors = [];
     
-    // First pass: round everyone to nearest 100
+    // First pass: round everyone to nearest 100 and record the rounding diff
     for (const pid of profileIds) {
-      netBalances[pid] = Math.round(netBalances[pid] / 100) * 100;
-      sum += netBalances[pid];
+      const exact = netBalances[pid];
+      const rounded = Math.round(exact / 100) * 100;
+      netBalances[pid] = rounded;
+      sum += rounded;
+      roundingErrors.push({
+        pid,
+        diff: rounded - exact // > 0 means they gained balance due to rounding
+      });
     }
     
     // Second pass: distribute the rounding error (sum) 1 peso at a time
-    // sum is always a multiple of 100 cents
-    let errorToDistribute = sum;
-    let i = 0;
-    while (errorToDistribute !== 0 && profileIds.length > 0) {
-      const pid = profileIds[i % profileIds.length];
-      if (errorToDistribute > 0) {
-        netBalances[pid] -= 100;
-        errorToDistribute -= 100;
-      } else {
-        netBalances[pid] += 100;
-        errorToDistribute += 100;
+    // to those who had the largest rounding differences
+    if (sum > 0) {
+      // We need to subtract 100 from people. Pick those who gained the most (highest positive diff)
+      roundingErrors.sort((a, b) => b.diff - a.diff);
+      let m = 0;
+      while (sum > 0 && m < roundingErrors.length) {
+        netBalances[roundingErrors[m].pid] -= 100;
+        sum -= 100;
+        m++;
       }
-      i++;
+    } else if (sum < 0) {
+      // We need to add 100 to people. Pick those who lost the most (most negative diff)
+      roundingErrors.sort((a, b) => a.diff - b.diff);
+      let m = 0;
+      while (sum < 0 && m < roundingErrors.length) {
+        netBalances[roundingErrors[m].pid] += 100;
+        sum += 100;
+        m++;
+      }
     }
 
     // 4. Calcular el plan simplificado de liquidación de deudas
